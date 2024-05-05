@@ -69,6 +69,9 @@ def display_data(df):
     filter_frame = tk.Frame(display_frame)
     filter_frame.pack(pady=10)
 
+    analyze_button = tk.Button(display_frame, text="Анализ трендов", command=analyze_crime_trend)
+    analyze_button.pack(pady=10)
+
     filter_label = tk.Label(filter_frame, text="Фильтр по объекту:")
     filter_label.pack(side=tk.LEFT)
 
@@ -123,5 +126,6 @@ root.title("Crime Analysis App")
 
 open_button = tk.Button(root, text="Open Crime Data", command=open_file)
 open_button.pack(pady=20)
+
 
 root.mainloop()
