@@ -4,13 +4,15 @@ from tkinter import ttk
 from tkinter import filedialog
 import matplotlib.pyplot as plt
 
+
 def open_file():
     file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
     if file_path:
         df = pd.read_excel(file_path)
         display_data(df)
-        plot_crime_trend(df)
+        # plot_crime_trend(df)
         analyze_crime_trend(df)
+
 
 def display_data(df):
     def filter_data():
@@ -35,10 +37,11 @@ def display_data(df):
 
     # Создание Treeview
     tree = ttk.Treeview(display_frame)
-
+    tree["show"]="headings"
     # Определение колонок
     columns_to_display = ['object_name', 'object_level', 'year2011', 'year2012', 'year2013', 'year2014',
-                          'year2015', 'year2016', 'year2017', 'year2018', 'year2019', 'year2020', 'year2021', 'year2022', 'comment']
+                          'year2015', 'year2016', 'year2017', 'year2018', 'year2019', 'year2020', 'year2021',
+                          'year2022', 'comment']
     columns_headers = {'object_name': 'Объект', 'object_level': 'Уровень объекта', 'comment': 'Комментарий'}
 
     tree["columns"] = columns_to_display
@@ -60,6 +63,9 @@ def display_data(df):
 
     tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
+    df = df.loc[df["indicator_name"].str.startswith("Всего зарегистрировано преступлений") |
+                df["indicator_name"].str.startswith("Количество")]
+
     # Вставка данных
     for index, row in df.iterrows():
         values = [row[col] for col in columns_to_display]
@@ -79,22 +85,50 @@ def display_data(df):
     filter_button = tk.Button(filter_frame, text="Фильтр", command=filter_data)
     filter_button.pack(side=tk.LEFT)
 
+    graphics_button = tk.Button(filter_frame, text="Отобразить графики",
+                                command=lambda: crime_graphics(df, filter_combobox.get()))
+    graphics_button.pack(side=tk.LEFT)
     # Упаковка Treeview
     tree.pack(expand=tk.YES, fill=tk.BOTH)
 
 
+def crime_graphics(df, filter_value):
+    # if filter_value:
+    #     df = df[df.] == filter_value]
+
+    pass
+
+
 def plot_crime_trend(df):
+    # window = tk.Tk()
+    # window.title("Crime trends")
     # Построение графика зависимости от года
-    plt.figure(figsize=(10, 6))
+    # plt.figure(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    weights = {}
+
+    # for crime in df["section_name"]
+
     for col in df.columns:
         if col.startswith("year"):
-            plt.plot(df["section_name"], df[col], label=col)
-    plt.xlabel("Crime Type")
-    plt.ylabel("Number of Crimes")
-    plt.xticks(rotation=90)
-    plt.legend()
-    plt.title("Crime Trend Over the Years")
-    plt.show()
+            # plt.plot(df["section_name"], df[col], label=col)
+            ax.bar(df["section_name"], df[col], label=col)
+    ax.xlabel("Crime Type")
+    ax.xticks(df["section_name"])
+    # plt.xticks(rotation=90)
+
+    ax.legend()
+    # ax.title("Crime Trend Over the Years")
+    # ax.show()
+    # plt.xlabel("Crime Type")
+    # plt.ylabel("Number of Crimes")
+    # # plt.xticks(rotation=90)
+    #
+    # plt.legend()
+    # plt.title("Crime Trend Over the Years")
+    # plt.show()
+
 
 def analyze_crime_trend(df):
     # Анализ изменения уровня преступности за 10 лет
@@ -104,6 +138,7 @@ def analyze_crime_trend(df):
     max_increase = df.loc[df["change"].idxmax()]
     print("Type of crime with the largest decrease over 10 years:", max_decrease["section_name"])
     print("Type of crime with the largest increase over 10 years:", max_increase["section_name"])
+
 
 def extrapolate_crime_trend(df, n_years):
     # Статистическое прогнозирование методом экстраполяции по скользящей средней
@@ -117,6 +152,7 @@ def extrapolate_crime_trend(df, n_years):
     plt.title("Crime Trend Extrapolation for Next {} Years".format(n_years))
     plt.legend()
     plt.show()
+
 
 root = tk.Tk()
 root.title("Crime Analysis App")
