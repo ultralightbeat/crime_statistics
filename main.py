@@ -1,16 +1,22 @@
+import pandas
 import pandas as pd
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 import matplotlib.pyplot as plt
+import matplotlib
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk)
+
 
 def open_file():
     file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
     if file_path:
         df = pd.read_excel(file_path)
         display_data(df)
-        plot_crime_trend(df)
-        analyze_crime_trend(df)
+        # plot_crime_trend(df)
+        # analyze_crime_trend(df)
+
 
 def display_data(df):
     def filter_data():
@@ -35,10 +41,11 @@ def display_data(df):
 
     # Создание Treeview
     tree = ttk.Treeview(display_frame)
-
+    tree["show"] = "headings"
     # Определение колонок
     columns_to_display = ['object_name', 'object_level', 'year2011', 'year2012', 'year2013', 'year2014',
-                          'year2015', 'year2016', 'year2017', 'year2018', 'year2019', 'year2020', 'year2021', 'year2022', 'comment']
+                          'year2015', 'year2016', 'year2017', 'year2018', 'year2019', 'year2020', 'year2021',
+                          'year2022', 'comment']
     columns_headers = {'object_name': 'Объект', 'object_level': 'Уровень объекта', 'comment': 'Комментарий'}
 
     tree["columns"] = columns_to_display
@@ -59,6 +66,9 @@ def display_data(df):
     hsb.pack(side=tk.BOTTOM, fill=tk.X)
 
     tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+
+    df = df.loc[df["indicator_name"].str.startswith("Всего зарегистрировано преступлений") |
+                df["indicator_name"].str.startswith("Количество")]
 
     # Вставка данных
     for index, row in df.iterrows():
@@ -82,22 +92,118 @@ def display_data(df):
     filter_button = tk.Button(filter_frame, text="Фильтр", command=filter_data)
     filter_button.pack(side=tk.LEFT)
 
+    graphics_button = tk.Button(filter_frame, text="Отобразить графики",
+                                command=lambda: plot_crime_trend(df, filter_combobox.get()))
+    graphics_button.pack(side=tk.LEFT)
     # Упаковка Treeview
-    tree.pack(expand=tk.YES, fill=tk.BOTH)
+    tree.pack(expand=tk.YES, fill=tk.BOTH, padx=10)
 
 
-def plot_crime_trend(df):
+class Graphic(tk.Frame):
+    def __init__(self, x, y, title, master=None, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.figure = matplotlib.figure.Figure(figsize=(5, 5), dpi=100, tight_layout=True)
+        ax = self.figure.add_subplot(111)
+        ax.plot(x[:12], y[:12], marker='o', mfc="r", mec="r", markersize=5, linestyle='-', linewidth=2,
+                color='b', label=r"$\ данные о преступлениях $")  # Задаем стиль линии и точек
+        ax.plot(x[11:], y[11:], marker='o', mfc="r", mec="r", markersize=5, linestyle='--', linewidth=2,
+                color='b', label=r"$\ предсказание $")  # Задаем стиль линии и точек
+        ax.set_xlabel("Года", fontsize=12)
+        ax.set_ylabel("Количество преступлений", fontsize=12)
+        ax.grid(color="r", linewidth=1.0)
+        ax.legend()
+
+        # self.figure.tight_layout()
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
+        self.canvas.draw()
+        tk.Label(self, text=title).pack(anchor="n", expand=1, fill=tk.X)
+        self.canvas.get_tk_widget().pack(anchor="center", expand=1, fill=tk.X)
+        toolbar_frame = NavigationToolbar2Tk(self.canvas, self)
+        # toolbar_frame.pack(anchor="s", expand=1, fill=tk.X)
+        self.canvas.get_tk_widget().pack(anchor="center", expand=1, fill=tk.BOTH)
+
+
+
+def get_crime_prediction(x, y: list):
+    new_x = [i for i in range(2023, 2035)]
+    new_y = y.copy()
+    for i in range(12):
+        new_y.append(sum(new_y[-12:]) // 12)
+    return new_x, new_y[-12:]
+
+
+def plot_crime_trend(df: pandas.DataFrame, filter_value):
+    current_graphic_id = 0
+
+    def get_current_graphic_id(action):
+        nonlocal current_graphic_id
+        current_graphic_id = current_graphic_id
+        graphics[current_graphic_id].pack_forget()
+        if action == "<":
+            if current_graphic_id - 1 > 0:
+                current_graphic_id -= 1
+            else:
+                current_graphic_id = len(graphics) - 1
+        elif action == ">":
+            if current_graphic_id + 1 < len(graphics):
+                current_graphic_id += 1
+            else:
+                current_graphic_id = 0
+        return current_graphic_id
+
+    def show_graphics(graphics, action):
+        index = get_current_graphic_id(action)
+        graphics[index].pack(
+            side=tk.TOP, fill=tk.X, expand=True)
+
+    if not filter_value:
+        tk.messagebox.showinfo(title="Информация", message="Выберите конкретный регион, графики по которому вы \nхотите увидеть")
+        return
+    current_df = df
+    window = tk.Tk()
+    w = window.winfo_screenwidth()
+    h = window.winfo_screenheight()
+    # window.geometry(f"720x1080")
+    window.title(f"Crime trends: {filter_value}")
+    graphics = []
+
+    left_button = tk.Button(window, text="<", width=10,
+                            command=lambda: show_graphics(graphics, "<"))
+    left_button.pack(side=tk.LEFT, fill=tk.Y)
+
+    right_button = tk.Button(window, text=">", width=10,
+                             command=lambda: show_graphics(graphics, ">"))
+    right_button.pack(side=tk.RIGHT, fill=tk.Y)
+
+    # window.geometry(f"1080x720+{w}+{h}")
+    if filter_value:
+        current_df = df[df['object_name'] == filter_value]
+
     # Построение графика зависимости от года
-    plt.figure(figsize=(10, 6))
-    for col in df.columns:
-        if col.startswith("year"):
-            plt.plot(df["section_name"], df[col], label=col)
-    plt.xlabel("Crime Type")
-    plt.ylabel("Number of Crimes")
-    plt.xticks(rotation=90)
-    plt.legend()
-    plt.title("Crime Trend Over the Years")
-    plt.show()
+    graphic_count = 1
+    for row_id, row in current_df.iterrows():
+        x = []
+        y = []
+        for name, value in row.items():
+            # print(value)
+            if "year" in name:
+                x.append(int(name[4:]))
+                y.append(value)
+        predicted_x, predicted_y = get_crime_prediction(x, y)
+        x = x + predicted_x
+        y = y + predicted_y
+        # print(y)
+        old_title = row["indicator_name"]
+        new_title_with_line_breaks = ""
+        for i in range(len(old_title)):
+            if i+1 % 66 == 0:
+                new_title_with_line_breaks += "\n"
+            new_title_with_line_breaks += old_title[i]
+        graphics.append(Graphic(x, y, title=f"{graphic_count}\{len(current_df)} {new_title_with_line_breaks}", master=window))
+        graphic_count += 1
+
+    show_graphics(graphics, "")
+
 
 def analyze_crime_trend(df):
     # Анализ изменения уровня преступности за 10 лет
@@ -108,18 +214,6 @@ def analyze_crime_trend(df):
     print("Type of crime with the largest decrease over 10 years:", max_decrease["section_name"])
     print("Type of crime with the largest increase over 10 years:", max_increase["section_name"])
 
-def extrapolate_crime_trend(df, n_years):
-    # Статистическое прогнозирование методом экстраполяции по скользящей средней
-    smoothed_data = df.filter(like="year").rolling(window=3, axis=1).mean()
-    extrapolated_data = smoothed_data.mean(axis=0) * (1 + df.shape[0] / n_years)
-    plt.figure(figsize=(8, 5))
-    plt.plot(df.columns[8:], df.mean()[8:], label="Actual Data")
-    plt.plot(extrapolated_data.index, extrapolated_data, label="Extrapolated Data", linestyle='--')
-    plt.xlabel("Year")
-    plt.ylabel("Number of Crimes")
-    plt.title("Crime Trend Extrapolation for Next {} Years".format(n_years))
-    plt.legend()
-    plt.show()
 
 root = tk.Tk()
 root.title("Crime Analysis App")
