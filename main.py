@@ -153,6 +153,9 @@ def plot_crime_trend(df: pandas.DataFrame, filter_value):
         graphics[index].pack(
             side=tk.TOP, fill=tk.X, expand=True)
 
+    if not filter_value:
+        tk.messagebox.showinfo(title="Информация", message="Выберите конкретный регион, графики по которому вы \nхотите увидеть")
+        return
     current_df = df
     window = tk.Tk()
     w = window.winfo_screenwidth()
