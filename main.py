@@ -16,7 +16,6 @@ def open_file():
         display_data(df)
 
 
-
 def display_data(df):
     def filter_data():
         filter_value = filter_combobox.get()
@@ -123,7 +122,7 @@ class Graphic(tk.Frame):
 
 
 def get_crime_prediction(x, y: list, prediction_years_count):
-    new_x = [i for i in range(2023, 2023+prediction_years_count)]
+    new_x = [i for i in range(2023, 2023 + prediction_years_count)]
     predicted_y = []
     new_y = y.copy()
     for i in range(prediction_years_count):
@@ -152,16 +151,6 @@ def show_prediction_window():
 def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
     current_graphic_id = 0
     current_df = df
-    if filter_value:
-        current_df = df[df['object_name'] == filter_value]
-        if current_df.empty:
-            tk.messagebox.showinfo(title="Информация",
-                                   message="Такого региона нет в базе данных")
-            return
-    else:
-        tk.messagebox.showinfo(title="Информация",
-                               message="Выберите конкретный регион, графики по которому вы \nхотите увидеть")
-        return
 
     def get_current_graphic_id(action):
         nonlocal current_graphic_id
@@ -177,23 +166,31 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
                 current_graphic_id += 1
             else:
                 current_graphic_id = 0
-        return current_graphic_id
 
     def show_graphics(graphics, action):
-        index = get_current_graphic_id(action)
-        graphics[index].pack(
+        get_current_graphic_id(action)
+        graphics[current_graphic_id].pack(
             side=tk.TOP, fill=tk.X, expand=True)
         window.eval('tk::PlaceWindow . center')
 
+    if filter_value:
+        current_df = df[df['object_name'] == filter_value]
+        if current_df.empty:
+            tk.messagebox.showinfo(title="Информация",
+                                   message="Такого региона нет в базе данных")
+            return
+    else:
+        tk.messagebox.showinfo(title="Информация",
+                               message="Выберите конкретный регион, графики по которому вы \nхотите увидеть")
+        return
 
     prediction_years_count = show_prediction_window()
     if prediction_years_count == -1:
         return
 
-
     window = tk.Tk()
     window.eval('tk::PlaceWindow . center')
-    window.attributes("-topmost",True)
+    window.attributes("-topmost", True)
     window.title(f"Crime trends: {filter_value}")
     graphics = []
 
@@ -205,21 +202,18 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
                              command=lambda: show_graphics(graphics, ">"))
     right_button.pack(side=tk.RIGHT, fill=tk.Y)
 
-
     # Построение графика зависимости от года
     graphic_count = 1
     for row_id, row in current_df.iterrows():
         x = []
         y = []
         for name, value in row.items():
-            # print(value)
             if "year" in name:
                 x.append(int(name[4:]))
                 y.append(value)
         predicted_x, predicted_y = get_crime_prediction(x, y, prediction_years_count)
         x = x + predicted_x
         y = y + predicted_y
-        # print(y)
         old_title = row["indicator_name"]
         new_title_with_line_breaks = ""
         for i in range(len(old_title)):
