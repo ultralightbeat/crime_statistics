@@ -3,8 +3,8 @@ import pandas as pd
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog, simpledialog
-import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 
@@ -136,8 +136,6 @@ def show_prediction_window():
     years = simpledialog.askinteger("Предсказание", "Введите количество лет для предсказания:")
     if years is None:
         return -1
-    if not years:
-        years = 0
     try:
         years = int(years)
         if years < 0:
@@ -186,7 +184,7 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
         return
 
     prediction_years_count = show_prediction_window()
-    if prediction_years_count == -1:
+    if prediction_years_count < 0:
         return
 
     window = tk.Tk()
