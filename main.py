@@ -3,7 +3,6 @@ import pandas as pd
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog, simpledialog
-import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
