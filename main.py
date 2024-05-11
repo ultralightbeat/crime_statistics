@@ -77,7 +77,8 @@ def display_data(df):
     filter_frame = tk.Frame(display_frame)
     filter_frame.pack(pady=10)
 
-    analyze_button = tk.Button(display_frame, text="Анализ трендов", command=analyze_crime_trend)
+    analyze_button = tk.Button(display_frame, text="Анализ трендов", command=lambda: analyze_crime_trend(df))
+
     analyze_button.pack(pady=10)
 
     filter_label = tk.Label(filter_frame, text="Фильтр по объекту:")
@@ -228,13 +229,42 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
 
 
 def analyze_crime_trend(df):
-    # Анализ изменения уровня преступности за 10 лет
+    # Добавление столбца 'total_crimes', который представляет сумму всех преступлений за все года
     df["total_crimes"] = df.filter(like="year").sum(axis=1)
-    df["change"] = (df["year2022"] - df["year2011"]) / df["year2011"] * 100
-    max_decrease = df.loc[df["change"].idxmin()]
-    max_increase = df.loc[df["change"].idxmax()]
-    print("Type of crime with the largest decrease over 10 years:", max_decrease["section_name"])
-    print("Type of crime with the largest increase over 10 years:", max_increase["section_name"])
+
+    # Группировка данных по типу преступлений и региону
+    grouped_data = df.groupby(['comment', 'object_name']).sum()
+    max_crimes_per_type = grouped_data.groupby('comment').agg({'total_crimes': 'max'})
+    regions_with_max_crimes = {}
+    for comment, max_crimes in max_crimes_per_type.iterrows():
+        max_crime_row = grouped_data.loc[(grouped_data.index.get_level_values('comment') == comment) &
+                                         (grouped_data['total_crimes'] == max_crimes['total_crimes'])]
+        regions_with_max_crimes[comment] = max_crime_row.index.get_level_values('object_name').tolist()
+
+    def show_selected_crime(event):
+        selected_crime = crime_combobox.get()
+        max_crimes = max_crimes_per_type.loc[selected_crime, 'total_crimes']
+        regions = ", ".join(regions_with_max_crimes[selected_crime])
+        crime_info_label.config(text=f"Максимальное количество преступлений: {max_crimes}\n"
+                                     f"Регионы с максимальным количеством преступлений: {regions}")
+
+    result_window = tk.Toplevel(root)
+    result_window.title("Результаты анализа")
+
+
+    # Установка положения и размеров окна по центру экрана
+    result_window.geometry("600x200+450+300")
+
+    crime_combobox = ttk.Combobox(result_window, values=max_crimes_per_type.index.tolist(), width=150)
+
+    crime_combobox.bind("<<ComboboxSelected>>", show_selected_crime)
+    crime_combobox.pack(pady=10)
+
+    crime_info_label = tk.Label(result_window, text="")
+    crime_info_label.pack(pady=10)
+
+
+
 
 
 root = tk.Tk()
