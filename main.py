@@ -135,8 +135,6 @@ def show_prediction_window():
     years = simpledialog.askinteger("Предсказание", "Введите количество лет для предсказания:")
     if years is None:
         return -1
-    if not years:
-        years = 0
     try:
         years = int(years)
         if years < 0:
