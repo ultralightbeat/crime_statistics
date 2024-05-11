@@ -233,35 +233,43 @@ def analyze_crime_trend(df):
     # Группировка данных по типу преступлений и региону
     grouped_data = df.groupby(['comment', 'object_name']).sum()
     max_crimes_per_type = grouped_data.groupby('comment').agg({'total_crimes': 'max'})
+    min_crimes_per_type = grouped_data.groupby('comment').agg({'total_crimes': 'min'})
     regions_with_max_crimes = {}
+    regions_with_min_crimes = {}
+
     for comment, max_crimes in max_crimes_per_type.iterrows():
         max_crime_row = grouped_data.loc[(grouped_data.index.get_level_values('comment') == comment) &
                                          (grouped_data['total_crimes'] == max_crimes['total_crimes'])]
         regions_with_max_crimes[comment] = max_crime_row.index.get_level_values('object_name').tolist()
 
+    for comment, min_crimes in min_crimes_per_type.iterrows():
+        min_crime_row = grouped_data.loc[(grouped_data.index.get_level_values('comment') == comment) &
+                                         (grouped_data['total_crimes'] == min_crimes['total_crimes'])]
+        regions_with_min_crimes[comment] = min_crime_row.index.get_level_values('object_name').tolist()
+
     def show_selected_crime(event):
         selected_crime = crime_combobox.get()
         max_crimes = max_crimes_per_type.loc[selected_crime, 'total_crimes']
-        regions = ", ".join(regions_with_max_crimes[selected_crime])
+        min_crimes = min_crimes_per_type.loc[selected_crime, 'total_crimes']
+        regions_max = "\n".join(regions_with_max_crimes[selected_crime])  # Перенос строки для регионов с макс. преступлениями
+        regions_min = "\n".join(regions_with_min_crimes[selected_crime])  # Перенос строки для регионов с мин. преступлениями
         crime_info_label.config(text=f"Максимальное количество преступлений: {max_crimes}\n"
-                                     f"Регионы с максимальным количеством преступлений: {regions}")
+                                     f"Регионы с максимальным количеством преступлений:\n{regions_max}\n\n"
+                                     f"Минимальное количество преступлений: {min_crimes}\n"
+                                     f"Регионы с минимальным количеством преступлений:\n{regions_min}")
 
     result_window = tk.Toplevel(root)
     result_window.title("Результаты анализа")
 
-
     # Установка положения и размеров окна по центру экрана
-    result_window.geometry("600x200+450+300")
+    result_window.geometry("1050x170+300+300")
 
-    crime_combobox = ttk.Combobox(result_window, values=max_crimes_per_type.index.tolist(), width=150)
+    crime_combobox = ttk.Combobox(result_window, values=max_crimes_per_type.index.tolist(), width=200)
 
     crime_combobox.bind("<<ComboboxSelected>>", show_selected_crime)
     crime_combobox.pack(pady=10)
-
     crime_info_label = tk.Label(result_window, text="")
     crime_info_label.pack(pady=10)
-
-
 
 
 
