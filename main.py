@@ -65,8 +65,8 @@ def display_data(df):
 
     tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
-    # df = df.loc[df["indicator_name"].str.startswith("Всего зарегистрировано преступлений") |
-    #             df["indicator_name"].str.startswith("Количество")]
+    df = df.loc[df["indicator_name"].str.startswith("Всего зарегистрировано преступлений") |
+                df["indicator_name"].str.startswith("Количество")]
 
     # Вставка данных
     for index, row in df.iterrows():
@@ -159,8 +159,6 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
     current_graphic_id = 0
     current_df = df
 
-    # df = df.loc[df["indicator_name"].str.startswith("Всего зарегистрировано преступлений") |
-    #             df["indicator_name"].str.startswith("Количество")]
     def get_current_graphic_id(action):
         nonlocal current_graphic_id
         current_graphic_id = current_graphic_id
