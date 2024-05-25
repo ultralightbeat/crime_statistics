@@ -35,7 +35,7 @@ def display_data(df):
             tree.insert("", tk.END, values=values)
 
     display_frame = tk.Toplevel(root)
-    display_frame.title("Данные о преступности")
+    display_frame.title("Данные из файла")
     # display_frame.
     # Создание Treeview
     tree = ttk.Treeview(display_frame)
@@ -99,17 +99,18 @@ def display_data(df):
 
 
 class Graphic(tk.Frame):
-    def __init__(self, x, y, title, master=None, *args, **kwargs):
+    def __init__(self, x, y, predicted_count, title, master=None, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.figure = matplotlib.figure.Figure(figsize=(5, 5), dpi=100, tight_layout=True)
         ax = self.figure.add_subplot(111)
-        ax.plot(x[:12], y[:12], marker='o', mfc="r", mec="r", markersize=5, linestyle='-', linewidth=2,
-                color='b', label=r"$\ данные о преступлениях $")  # Задаем стиль линии и точек
-        if len(x) > 12:
-            ax.plot(x[11:], y[11:], marker='o', mfc="m", mec="c", markersize=5, linestyle='--', linewidth=2,
+        number_where_predicted_begin = len(x)-predicted_count
+        ax.plot(x[:number_where_predicted_begin], y[:number_where_predicted_begin], marker='o', mfc="r", mec="r", markersize=5, linestyle='-', linewidth=2,
+                color='b', label=r"$\ данные из файла $")  # Задаем стиль линии и точек
+        if len(x) > number_where_predicted_begin:
+            ax.plot(x[number_where_predicted_begin-1:], y[number_where_predicted_begin-1:], marker='o', mfc="m", mec="c", markersize=5, linestyle='--', linewidth=2,
                     color='c', label=r"$\ предсказание $")  # Задаем стиль линии и точек
         ax.set_xlabel("Года", fontsize=12)
-        ax.set_ylabel("Количество преступлений", fontsize=12)
+        ax.set_ylabel("Количество", fontsize=12)
         ax.grid(color="r", linewidth=1.0)
         ax.legend()
 
@@ -122,15 +123,23 @@ class Graphic(tk.Frame):
         self.canvas.get_tk_widget().pack(anchor="center", expand=1, fill=tk.BOTH)
 
 
-def get_crime_prediction(x, y: list, prediction_years_count):
+def get_crime_prediction(x, y: list, prediction_years_count, extrapolation):
     new_x = [i for i in range(2023, 2023 + prediction_years_count)]
     predicted_y = []
     new_y = y.copy()
     for i in range(prediction_years_count):
-        new_y.append(sum(new_y[-12:]) // 12)
-        predicted_y.append(sum(new_y[-12:]) // 12)
+        new_y.append(sum(new_y[-extrapolation:]) // extrapolation)
+        predicted_y.append(sum(new_y[-extrapolation:]) // extrapolation)
     return new_x, predicted_y
 
+def get_data_without_nan(x,y):
+    new_x = []
+    new_y = []
+    for i in range(len(x)):
+        if not pd.isna(y[i]):
+            new_x.append(x[i])
+            new_y.append(y[i])
+    return new_x, new_y
 
 def show_prediction_window():
     years = simpledialog.askinteger("Предсказание", "Введите количество лет для предсказания:")
@@ -156,7 +165,7 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
         current_graphic_id = current_graphic_id
         graphics[current_graphic_id].pack_forget()
         if action == "<":
-            if current_graphic_id - 1 > 0:
+            if current_graphic_id - 1 >= 0:
                 current_graphic_id -= 1
             else:
                 current_graphic_id = len(graphics) - 1
@@ -193,15 +202,6 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
     window.title(f"Crime trends: {filter_value}")
     graphics = []
 
-    left_button = tk.Button(window, text="<", width=10,
-                            command=lambda: show_graphics(graphics, "<"))
-    left_button.pack(side=tk.LEFT, fill=tk.Y)
-
-    right_button = tk.Button(window, text=">", width=10,
-                             command=lambda: show_graphics(graphics, ">"))
-    right_button.pack(side=tk.RIGHT, fill=tk.Y)
-
-    # Построение графика зависимости от года
     graphic_count = 1
     for row_id, row in current_df.iterrows():
         x = []
@@ -210,19 +210,25 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
             if "year" in name:
                 x.append(int(name[4:]))
                 y.append(value)
-        predicted_x, predicted_y = get_crime_prediction(x, y, prediction_years_count)
+        x, y = get_data_without_nan(x, y)
+        predicted_x, predicted_y = get_crime_prediction(x, y, prediction_years_count, len(x))
         x = x + predicted_x
         y = y + predicted_y
-        old_title = row["indicator_name"]
-        new_title_with_line_breaks = ""
-        for i in range(len(old_title)):
-            if i + 1 % 66 == 0:
-                new_title_with_line_breaks += "\n"
-            new_title_with_line_breaks += old_title[i]
+        title = row["indicator_name"]
+
         graphics.append(
-            Graphic(x, y, title=f"{graphic_count}\{len(current_df)} {new_title_with_line_breaks}", master=window))
+            Graphic(x, y, prediction_years_count, title=f"{graphic_count}\{len(current_df)} {title}", master=window))
+
         graphic_count += 1
 
+    if len(graphics) > 1:
+        left_button = tk.Button(window, text="<", width=10,
+                                command=lambda: show_graphics(graphics, "<"))
+        left_button.pack(side=tk.LEFT, fill=tk.Y)
+
+        right_button = tk.Button(window, text=">", width=10,
+                                 command=lambda: show_graphics(graphics, ">"))
+        right_button.pack(side=tk.RIGHT, fill=tk.Y)
     show_graphics(graphics, "")
 
 
@@ -274,7 +280,7 @@ def analyze_crime_trend(df):
 
 
 root = tk.Tk()
-root.title("Crime Analysis App")
+root.title("Crime&Tourism Analysis App")
 root.eval('tk::PlaceWindow . center')
 open_button = tk.Button(root, text="Open Crime Data", command=open_file)
 open_button.pack(pady=20)
