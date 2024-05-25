@@ -65,8 +65,8 @@ def display_data(df):
 
     tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
-    df = df.loc[df["indicator_name"].str.startswith("Всего зарегистрировано преступлений") |
-                df["indicator_name"].str.startswith("Количество")]
+    # df = df.loc[df["indicator_name"].str.startswith("Всего зарегистрировано преступлений") |
+    #             df["indicator_name"].str.startswith("Количество")]
 
     # Вставка данных
     for index, row in df.iterrows():
