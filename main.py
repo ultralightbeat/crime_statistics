@@ -35,7 +35,7 @@ def display_data(df):
             tree.insert("", tk.END, values=values)
 
     display_frame = tk.Toplevel(root)
-    display_frame.title("Данные о преступности")
+    display_frame.title("Данные из файла")
     # display_frame.
     # Создание Treeview
     tree = ttk.Treeview(display_frame)
@@ -244,7 +244,7 @@ def analyze_crime_trend(df):
 
 
 root = tk.Tk()
-root.title("Crime& Analysis App")
+root.title("Crime&Tourism Analysis App")
 root.eval('tk::PlaceWindow . center')
 open_button = tk.Button(root, text="Open Crime Data", command=open_file)
 open_button.pack(pady=20)
