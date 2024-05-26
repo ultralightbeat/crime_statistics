@@ -103,11 +103,13 @@ class Graphic(tk.Frame):
         super().__init__(master, *args, **kwargs)
         self.figure = matplotlib.figure.Figure(figsize=(5, 5), dpi=100, tight_layout=True)
         ax = self.figure.add_subplot(111)
-        number_where_predicted_begin = len(x)-predicted_count
-        ax.plot(x[:number_where_predicted_begin], y[:number_where_predicted_begin], marker='o', mfc="r", mec="r", markersize=5, linestyle='-', linewidth=2,
+        number_where_predicted_begin = len(x) - predicted_count
+        ax.plot(x[:number_where_predicted_begin], y[:number_where_predicted_begin], marker='o', mfc="r", mec="r",
+                markersize=5, linestyle='-', linewidth=2,
                 color='b', label=r"$\ данные из файла $")  # Задаем стиль линии и точек
         if len(x) > number_where_predicted_begin:
-            ax.plot(x[number_where_predicted_begin-1:], y[number_where_predicted_begin-1:], marker='o', mfc="m", mec="c", markersize=5, linestyle='--', linewidth=2,
+            ax.plot(x[number_where_predicted_begin - 1:], y[number_where_predicted_begin - 1:], marker='o', mfc="m",
+                    mec="c", markersize=5, linestyle='--', linewidth=2,
                     color='c', label=r"$\ предсказание $")  # Задаем стиль линии и точек
         ax.set_xlabel("Года", fontsize=12)
         ax.set_ylabel("Количество", fontsize=12)
@@ -132,7 +134,8 @@ def get_crime_prediction(x, y: list, prediction_years_count, extrapolation):
         predicted_y.append(sum(new_y[-extrapolation:]) // extrapolation)
     return new_x, predicted_y
 
-def get_data_without_nan(x,y):
+
+def get_data_without_nan(x, y):
     new_x = []
     new_y = []
     for i in range(len(x)):
@@ -140,6 +143,7 @@ def get_data_without_nan(x,y):
             new_x.append(x[i])
             new_y.append(y[i])
     return new_x, new_y
+
 
 def show_prediction_window():
     years = simpledialog.askinteger("Предсказание", "Введите количество лет для предсказания:")
@@ -199,7 +203,7 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
     window = tk.Tk()
     window.eval('tk::PlaceWindow . center')
     window.attributes("-topmost", True)
-    window.title(f"Crime trends: {filter_value}")
+    window.title(f"Данные по: {filter_value}")
     graphics = []
 
     graphic_count = 1
@@ -215,9 +219,10 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
         x = x + predicted_x
         y = y + predicted_y
         title = row["indicator_name"]
-
+        if current_df.shape[0] > 1:
+            title = f"{graphic_count}\{len(current_df)} {title}"
         graphics.append(
-            Graphic(x, y, prediction_years_count, title=f"{graphic_count}\{len(current_df)} {title}", master=window))
+            Graphic(x, y, prediction_years_count, title=title, master=window))
 
         graphic_count += 1
 
@@ -257,8 +262,10 @@ def analyze_crime_trend(df):
         selected_crime = crime_combobox.get()
         max_crimes = max_crimes_per_type.loc[selected_crime, 'total_crimes']
         min_crimes = min_crimes_per_type.loc[selected_crime, 'total_crimes']
-        regions_max = "\n".join(regions_with_max_crimes[selected_crime])  # Перенос строки для регионов с макс. преступлениями
-        regions_min = "\n".join(regions_with_min_crimes[selected_crime])  # Перенос строки для регионов с мин. преступлениями
+        regions_max = "\n".join(
+            regions_with_max_crimes[selected_crime])  # Перенос строки для регионов с макс. преступлениями
+        regions_min = "\n".join(
+            regions_with_min_crimes[selected_crime])  # Перенос строки для регионов с мин. преступлениями
         crime_info_label.config(text=f"Максимальное количество преступлений: {max_crimes}\n"
                                      f"Регионы с максимальным количеством преступлений:\n{regions_max}\n\n"
                                      f"Минимальное количество преступлений: {min_crimes}\n"
@@ -278,11 +285,10 @@ def analyze_crime_trend(df):
     crime_info_label.pack(pady=10)
 
 
-
 root = tk.Tk()
 root.title("Crime&Tourism Analysis App")
 root.eval('tk::PlaceWindow . center')
-open_button = tk.Button(root, text="Open Crime Data", command=open_file)
+open_button = tk.Button(root, text="Open Data", command=open_file)
 open_button.pack(pady=20)
 
 root.mainloop()
