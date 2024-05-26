@@ -266,10 +266,10 @@ def analyze_crime_trend(df):
             regions_with_max_crimes[selected_crime])  # Перенос строки для регионов с макс. преступлениями
         regions_min = "\n".join(
             regions_with_min_crimes[selected_crime])  # Перенос строки для регионов с мин. преступлениями
-        crime_info_label.config(text=f"Максимальное количество преступлений: {max_crimes}\n"
-                                     f"Регионы с максимальным количеством преступлений:\n{regions_max}\n\n"
-                                     f"Минимальное количество преступлений: {min_crimes}\n"
-                                     f"Регионы с минимальным количеством преступлений:\n{regions_min}")
+        crime_info_label.config(text=f"Максимальное количество: {max_crimes}\n"
+                                     f"Регионы с максимальным количеством:\n{regions_max}\n\n"
+                                     f"Минимальное количество: {min_crimes}\n"
+                                     f"Регионы с минимальным количеством:\n{regions_min}")
 
     result_window = tk.Toplevel(root)
     result_window.title("Результаты анализа")
