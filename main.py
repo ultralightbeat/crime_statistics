@@ -77,7 +77,8 @@ def display_data(df):
     filter_frame = tk.Frame(display_frame)
     filter_frame.pack(pady=10)
 
-    analyze_button = tk.Button(display_frame, text="Анализ трендов", command=analyze_crime_trend)
+    analyze_button = tk.Button(display_frame, text="Анализ трендов", command=lambda: analyze_crime_trend(df))
+
     analyze_button.pack(pady=10)
 
     filter_label = tk.Label(filter_frame, text="Фильтр по объекту:")
@@ -102,11 +103,13 @@ class Graphic(tk.Frame):
         super().__init__(master, *args, **kwargs)
         self.figure = matplotlib.figure.Figure(figsize=(5, 5), dpi=100, tight_layout=True)
         ax = self.figure.add_subplot(111)
-        number_where_predicted_begin = len(x)-predicted_count
-        ax.plot(x[:number_where_predicted_begin], y[:number_where_predicted_begin], marker='o', mfc="r", mec="r", markersize=5, linestyle='-', linewidth=2,
+        number_where_predicted_begin = len(x) - predicted_count
+        ax.plot(x[:number_where_predicted_begin], y[:number_where_predicted_begin], marker='o', mfc="r", mec="r",
+                markersize=5, linestyle='-', linewidth=2,
                 color='b', label=r"$\ данные из файла $")  # Задаем стиль линии и точек
         if len(x) > number_where_predicted_begin:
-            ax.plot(x[number_where_predicted_begin-1:], y[number_where_predicted_begin-1:], marker='o', mfc="m", mec="c", markersize=5, linestyle='--', linewidth=2,
+            ax.plot(x[number_where_predicted_begin - 1:], y[number_where_predicted_begin - 1:], marker='o', mfc="m",
+                    mec="c", markersize=5, linestyle='--', linewidth=2,
                     color='c', label=r"$\ предсказание $")  # Задаем стиль линии и точек
         ax.set_xlabel("Года", fontsize=12)
         ax.set_ylabel("Количество", fontsize=12)
@@ -131,7 +134,8 @@ def get_crime_prediction(x, y: list, prediction_years_count, extrapolation):
         predicted_y.append(sum(new_y[-extrapolation:]) // extrapolation)
     return new_x, predicted_y
 
-def get_data_without_nan(x,y):
+
+def get_data_without_nan(x, y):
     new_x = []
     new_y = []
     for i in range(len(x)):
@@ -139,6 +143,7 @@ def get_data_without_nan(x,y):
             new_x.append(x[i])
             new_y.append(y[i])
     return new_x, new_y
+
 
 def show_prediction_window():
     years = simpledialog.askinteger("Предсказание", "Введите количество лет для предсказания:")
@@ -198,7 +203,7 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
     window = tk.Tk()
     window.eval('tk::PlaceWindow . center')
     window.attributes("-topmost", True)
-    window.title(f"Crime trends: {filter_value}")
+    window.title(f"Данные по: {filter_value}")
     graphics = []
 
     graphic_count = 1
@@ -214,9 +219,10 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
         x = x + predicted_x
         y = y + predicted_y
         title = row["indicator_name"]
-
+        if current_df.shape[0] > 1:
+            title = f"{graphic_count}\{len(current_df)} {title}"
         graphics.append(
-            Graphic(x, y, prediction_years_count, title=f"{graphic_count}\{len(current_df)} {title}", master=window))
+            Graphic(x, y, prediction_years_count, title=title, master=window))
 
         graphic_count += 1
 
@@ -232,19 +238,57 @@ def plot_crime_trend(root, df: pandas.DataFrame, filter_value):
 
 
 def analyze_crime_trend(df):
-    # Анализ изменения уровня преступности за 10 лет
+    # Добавление столбца 'total_crimes', который представляет сумму всех преступлений за все года
     df["total_crimes"] = df.filter(like="year").sum(axis=1)
-    df["change"] = (df["year2022"] - df["year2011"]) / df["year2011"] * 100
-    max_decrease = df.loc[df["change"].idxmin()]
-    max_increase = df.loc[df["change"].idxmax()]
-    print("Type of crime with the largest decrease over 10 years:", max_decrease["section_name"])
-    print("Type of crime with the largest increase over 10 years:", max_increase["section_name"])
+
+    # Группировка данных по типу преступлений и региону
+    grouped_data = df.groupby(['comment', 'object_name']).sum()
+    max_crimes_per_type = grouped_data.groupby('comment').agg({'total_crimes': 'max'})
+    min_crimes_per_type = grouped_data.groupby('comment').agg({'total_crimes': 'min'})
+    regions_with_max_crimes = {}
+    regions_with_min_crimes = {}
+
+    for comment, max_crimes in max_crimes_per_type.iterrows():
+        max_crime_row = grouped_data.loc[(grouped_data.index.get_level_values('comment') == comment) &
+                                         (grouped_data['total_crimes'] == max_crimes['total_crimes'])]
+        regions_with_max_crimes[comment] = max_crime_row.index.get_level_values('object_name').tolist()
+
+    for comment, min_crimes in min_crimes_per_type.iterrows():
+        min_crime_row = grouped_data.loc[(grouped_data.index.get_level_values('comment') == comment) &
+                                         (grouped_data['total_crimes'] == min_crimes['total_crimes'])]
+        regions_with_min_crimes[comment] = min_crime_row.index.get_level_values('object_name').tolist()
+
+    def show_selected_crime(event):
+        selected_crime = crime_combobox.get()
+        max_crimes = max_crimes_per_type.loc[selected_crime, 'total_crimes']
+        min_crimes = min_crimes_per_type.loc[selected_crime, 'total_crimes']
+        regions_max = "\n".join(
+            regions_with_max_crimes[selected_crime])  # Перенос строки для регионов с макс. преступлениями
+        regions_min = "\n".join(
+            regions_with_min_crimes[selected_crime])  # Перенос строки для регионов с мин. преступлениями
+        crime_info_label.config(text=f"Максимальное количество преступлений: {max_crimes}\n"
+                                     f"Регионы с максимальным количеством преступлений:\n{regions_max}\n\n"
+                                     f"Минимальное количество преступлений: {min_crimes}\n"
+                                     f"Регионы с минимальным количеством преступлений:\n{regions_min}")
+
+    result_window = tk.Toplevel(root)
+    result_window.title("Результаты анализа")
+
+    # Установка положения и размеров окна по центру экрана
+    result_window.geometry("1050x170+300+300")
+
+    crime_combobox = ttk.Combobox(result_window, values=max_crimes_per_type.index.tolist(), width=200)
+
+    crime_combobox.bind("<<ComboboxSelected>>", show_selected_crime)
+    crime_combobox.pack(pady=10)
+    crime_info_label = tk.Label(result_window, text="")
+    crime_info_label.pack(pady=10)
 
 
 root = tk.Tk()
 root.title("Crime&Tourism Analysis App")
 root.eval('tk::PlaceWindow . center')
-open_button = tk.Button(root, text="Open Crime Data", command=open_file)
+open_button = tk.Button(root, text="Open Data", command=open_file)
 open_button.pack(pady=20)
 
 root.mainloop()
